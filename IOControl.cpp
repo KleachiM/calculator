@@ -20,6 +20,9 @@ CControl::CControl(CCalculator& calc, std::istream& input, std::ostream& output)
 		 }},
 		{"printvars", [this](istream& strm) {
 			 return PrintVars(strm);
+		 }},
+		{"fn", [this](istream& strm){
+			 return DeclareFunction(strm);
 		 }}
 	})
 {}
@@ -40,6 +43,21 @@ bool CControl::HandleCommand()
 	return false;
 }
 
+bool IsRestOfCommandEmpty(istream& inpStrm)
+{
+	if (inpStrm.eof())
+	{
+		return true;
+	}
+	string restOfCommand;
+	inpStrm >> restOfCommand;
+	if (restOfCommand.empty())
+	{
+		return true;
+	}
+	return false;
+}
+
 bool CControl::DeclareVariable(istream& inpStrm)
 {
 	string variableName;
@@ -49,15 +67,10 @@ bool CControl::DeclareVariable(istream& inpStrm)
 		m_output << "No variable to declare" << endl;
 		return false;
 	}
-	if (!inpStrm.eof())
+	if (!IsRestOfCommandEmpty(inpStrm))
 	{
-		string restOfCommand;
-		inpStrm >> restOfCommand;
-		if (!restOfCommand.empty())
-		{
-			m_output << "Too many identifiers" << endl;
-			return false;
-		}
+		m_output << "Too many identifiers" << endl;
+		return false;
 	}
 	if (!IsValidIdentifier(variableName))
 	{
@@ -82,41 +95,19 @@ bool CControl::IsValidIdentifier(const string& identifierName)
 	return false;
 }
 
-bool IsRestOfCommandEmpty(istream& inpStrm)
+bool CControl::ParseCommandAndArgsForAddVariable(smatch& submatch)
 {
-	if (inpStrm.eof())
+	if (m_calc.GetIdentifierType(submatch[1]).has_value())
 	{
-		return true;
-	}
-	string restOfCommand;
-	inpStrm >> restOfCommand;
-	if (restOfCommand.empty())
-	{
-		return true;
-	}
-	return false;
-}
-
-bool CControl::AssignValueToVariable(istream& inpStrm)
-{
-	string assignment;
-	inpStrm >> assignment;
-	if (!IsRestOfCommandEmpty(inpStrm))
-	{
-		m_output << "Not valid expression" << endl;
-		return false;
-	}
-	regex rgx("^([a-zA-Z_][a-zA-Z0-9_]*)=(?:(-?[0-9][0-9.]*)|([a-zA-Z_][a-zA-Z0-9_]*))$");
-	smatch submatch;
-	if (!regex_match(assignment, submatch, rgx))
-	{
-		m_output << "Not valid expression" << endl;
-		return false;
+		if (m_calc.GetIdentifierType(submatch[1]) == IdentifierType::FUNCTION)
+		{
+			m_output << "Cannot assign value to function" << endl;
+			return false;
+		}
 	}
 	try
 	{
-		double value = stod(submatch[2]);
-		return m_calc.AddVariableWithValue(submatch[1], value);
+		return m_calc.AddVariableWithValue(submatch[1], stod(submatch[2]));
 	}
 	catch (invalid_argument& e)
 	{
@@ -133,18 +124,49 @@ bool CControl::AssignValueToVariable(istream& inpStrm)
 	}
 }
 
+bool CControl::AssignValueToVariable(istream& inpStrm)
+{
+	string assignment;
+	inpStrm >> assignment;
+	if (!IsRestOfCommandEmpty(inpStrm))
+	{
+		m_output << "Not valid expression" << endl;
+		return false;
+	}
+	regex rgx(
+		"^([a-zA-Z_][a-zA-Z0-9_]*)=(?:(-?[0-9][0-9.]*)|([a-zA-Z_][a-zA-Z0-9_]*))$"
+		);
+	smatch submatch;
+	if (!regex_match(assignment, submatch, rgx))
+	{
+		m_output << "Not valid expression" << endl;
+		return false;
+	}
+	return ParseCommandAndArgsForAddVariable(submatch);
+}
+
 bool CControl::PrintValue(istream& inpStrm) const
 {
 	string identifier;
 	inpStrm >> identifier;
-	double value = m_calc.GetVariableByName(identifier);
-	if (isinf(value))
+	if (!m_calc.GetIdentifierType(identifier).has_value())
 	{
 		m_output << "Variable not exist" << endl;
 		return false;
 	}
-	m_output << fixed << setprecision(2) << value << endl;
-	return true;
+	if (m_calc.GetIdentifierType(identifier) == IdentifierType::VARIABLE)
+	{
+		double value = m_calc.GetVariableValueByName(identifier);
+		if (isinf(value))
+		{
+			m_output << "Variable not exist" << endl;
+			return false;
+		}
+		m_output << fixed << setprecision(2) << value << endl;
+		return true;
+	}
+
+	return false;
 }
 
 bool CControl::PrintVars(istream& inpStrm) const
@@ -162,5 +184,51 @@ bool CControl::PrintVars(istream& inpStrm) const
 			}
 		}
 	}
+	return true;
+}
+
+bool CControl::DeclareFunction(istream& inpStrm)
+{
+	string funcDeclaration;
+	inpStrm >> funcDeclaration;
+	if (!IsRestOfCommandEmpty(inpStrm))
+	{
+		m_output << "Not valid expression" << endl;
+		return false;
+	}
+	regex rgx(
+		"^([a-zA-Z_][a-zA-Z0-9_]*)="
+		"(?:([a-zA-Z_][a-zA-Z0-9_]*)|([a-zA-Z_][a-zA-Z0-9_][+,-,/,*][a-zA-Z_][a-zA-Z0-9_]*))$"
+		);
+	smatch submatch;
+	if (!regex_match(funcDeclaration, submatch, rgx))
+	{
+		m_output << "Not valid expression" << endl;
+		return false;
+	}
+	return ParseCommandAndArgsForAddFunction(submatch);
+}
+
+bool CControl::ParseCommandAndArgsForAddFunction(const smatch& submatch)
+{
+	auto allIdentifiers = m_calc.GetAllVariables();
+	Identifier identifierToAdd;
+	identifierToAdd.identifierName = submatch[1];
+	auto identToAdd = allIdentifiers.find(identifierToAdd);
+	if (identToAdd != allIdentifiers.end())
+	{
+		m_output << "Identifier already exist" << endl;
+		return false;
+	}
+	Identifier identifierToFind;
+	identifierToFind.identifierName = submatch[2];
+	auto identToFind = allIdentifiers.find(identifierToFind);
+	if (identToFind == allIdentifiers.end())
+	{
+		m_output << "Identifier not exist" << endl;
+		return false;
+	}
+	identifierToAdd.identifierValue = identToFind->identifierValue;
+	m_calc.AddFunctionWithVariable(identifierToAdd.identifierName, identifierToFind.identifierName);
 	return true;
 }

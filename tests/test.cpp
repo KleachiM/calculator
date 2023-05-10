@@ -53,7 +53,7 @@ TEST_CASE("Declaration variable")
 		REQUIRE(calc.GetAllVariables().empty());
 		REQUIRE(ctrl.HandleCommand());
 		REQUIRE(calc.GetAllVariables().size() == 1);
-		REQUIRE(std::isinf(calc.GetVariableByName("x")));
+		REQUIRE(std::isinf(calc.GetVariableValueByName("x")));
 	}
 
 	SECTION("Declaration not valid identifier name")
@@ -109,7 +109,7 @@ TEST_CASE("Assignment variable")
 		REQUIRE(calc.GetAllVariables().empty());
 		REQUIRE(ctrl.HandleCommand());
 		REQUIRE(calc.GetAllVariables().size() == 1);
-		REQUIRE(calc.GetVariableByName("a") == Catch::Approx(1));
+		REQUIRE(calc.GetVariableValueByName("a") == Catch::Approx(1));
 	}
 
 	SECTION("Not valid assignment")
@@ -140,7 +140,7 @@ SCENARIO("Assignment variable to other variable")
 
 			THEN("Variable b has value 1")
 			{
-				REQUIRE(calc.GetVariableByName("b") == Catch::Approx(1));
+				REQUIRE(calc.GetVariableValueByName("b") == Catch::Approx(1));
 			}
 		}
 	}
@@ -193,8 +193,8 @@ SCENARIO("Double assignment variable to other variable")
 
 			THEN("Variable c has value 1")
 			{
-				REQUIRE(calc.GetVariableByName("b") == Catch::Approx(1));
-				REQUIRE(calc.GetVariableByName("c") == Catch::Approx(1));
+				REQUIRE(calc.GetVariableValueByName("b") == Catch::Approx(1));
+				REQUIRE(calc.GetVariableValueByName("c") == Catch::Approx(1));
 			}
 		}
 	}
@@ -237,7 +237,7 @@ TEST_CASE("Print var")
 		inpStr << "let b=-0.99\n"s;
 		ctrl.HandleCommand();
 		REQUIRE(calc.GetAllVariables().size() == 1);
-		REQUIRE(calc.GetVariableByName("b") == Catch::Approx(-0.99));
+		REQUIRE(calc.GetVariableValueByName("b") == Catch::Approx(-0.99));
 		inpStr << "print b\n"s;
 		REQUIRE(ctrl.HandleCommand());
 		REQUIRE(outStr.str() == "-0.99\n");
@@ -287,5 +287,24 @@ SCENARIO("Print all variables")
 				REQUIRE(outStr.str() == "a:1.50\nb:1.50\nc:nan\n");
 			}
 		}
+	}
+}
+
+TEST_CASE("Declare function")
+{
+	CCalculator calc;
+	stringstream inpStr;
+	stringstream outStr;
+	CControl ctrl(calc, inpStr, outStr);
+
+	SECTION("Assign to function variable with nan")
+	{
+		inpStr << "var a\n"s;
+		ctrl.HandleCommand();
+		REQUIRE(calc.GetAllVariables().size() == 1);
+		inpStr << "fn firstFunc=a\n"s;
+		REQUIRE(ctrl.HandleCommand());
+		REQUIRE(outStr.str() == ""s);
+		REQUIRE(calc.GetAllVariables().size() == 2);
 	}
 }

@@ -1,11 +1,8 @@
 #include "Calculator.h"
 
-bool operator<(const Identifier& left, const Identifier& right)
-{
-	return left.identifierName < right.identifierName;
-}
+using namespace std;
 
-bool CCalculator::AddVariable(const std::string& newVar)
+bool CCalculator::AddVariable(const string& newVar)
 {
     Identifier newIdentifier;
 	newIdentifier.identifierName = newVar;
@@ -21,10 +18,10 @@ bool CCalculator::AddVariable(const std::string& newVar)
 
 bool isEqual(double a, double b)
 {
-	return std::abs(a - b) < std::numeric_limits<double>::epsilon();
+	return abs(a - b) < numeric_limits<double>::epsilon();
 }
 
-bool CCalculator::AddVariableWithValue(const std::string& variable, const double value)
+bool CCalculator::AddVariableWithValue(const string& variable, const double value)
 {
 	Identifier newIdentifier;
 	newIdentifier.identifierName = variable;
@@ -43,7 +40,7 @@ bool CCalculator::AddVariableWithValue(const std::string& variable, const double
 	return true;
 }
 
-bool CCalculator::AddVariableWithValue(const std::string& variable, const std::string& otherVariable)
+bool CCalculator::AddVariableWithValue(const string& variable, const string& otherVariable)
 {
 	if (variable == otherVariable)
 	{
@@ -54,16 +51,15 @@ bool CCalculator::AddVariableWithValue(const std::string& variable, const std::s
 	if (auto search = m_identifiers.find(oldIdent);
 		search != m_identifiers.end())
 	{
-		if (search->identifierType == IdentifierType::FUNCTION)
+		if (search->identifierType == IdentifierType::VARIABLE)
 		{
-			return false;
+			Identifier newIdent;
+			newIdent.identifierName = variable;
+			newIdent.identifierValue = search->identifierValue;
+			newIdent.identifierType = IdentifierType::VARIABLE;
+			m_identifiers.insert(newIdent);
+			return true;
 		}
-		Identifier newIdent;
-		newIdent.identifierName = variable;
-		newIdent.identifierValue = search->identifierValue;
-		newIdent.identifierType = IdentifierType::VARIABLE;
-		m_identifiers.insert(newIdent);
-		return true;
 	}
 	return false;
 }
@@ -73,7 +69,7 @@ const std::set<Identifier>& CCalculator::GetAllVariables() const
 	return m_identifiers;
 }
 
-double CCalculator::GetVariableByName(std::string variableName)
+double CCalculator::GetVariableValueByName(std::string variableName)
 {
 	Identifier identifier;
 	identifier.identifierName = variableName;
@@ -85,3 +81,38 @@ double CCalculator::GetVariableByName(std::string variableName)
 	return INFINITY;
 }
 
+optional<IdentifierType> CCalculator::GetIdentifierType(const string& identifierName) const
+{
+	Identifier identifier;
+	identifier.identifierName = identifierName;
+	if (auto search = m_identifiers.find(identifier);
+		search != m_identifiers.end())
+	{
+		return search->identifierType;
+	}
+	return nullopt;
+}
+
+bool CCalculator::AddFunctionWithVariable(const std::string& functionName, const std::string& variableName)
+{
+	if (functionName == variableName)
+	{
+		return false;
+	}
+	Identifier identifierVar;
+	identifierVar.identifierName = variableName;
+	if (auto search = m_identifiers.find(identifierVar);
+		search != m_identifiers.end())
+	{
+		if (search->identifierType == IdentifierType::VARIABLE)
+		{
+			Identifier idenfifierFunc;
+			idenfifierFunc.identifierName = functionName;
+			idenfifierFunc.identifierType = IdentifierType::FUNCTION;
+			idenfifierFunc.identifierValue = search->identifierValue;
+			m_identifiers.insert(idenfifierFunc);
+			return true;
+		}
+	}
+	return false;
+}

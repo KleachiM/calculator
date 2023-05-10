@@ -4,6 +4,7 @@
 #include <set>
 #include <string>
 #include <cmath>
+#include <optional>
 
 enum class IdentifierType
 {
@@ -16,6 +17,11 @@ struct Identifier
 	std::string identifierName;
 	IdentifierType identifierType;
 	double identifierValue = NAN;
+
+	bool operator<(const Identifier& left) const
+	{
+		return identifierName < left.identifierName;
+	}
 };
 
 class CCalculator
@@ -26,9 +32,13 @@ public:
 	bool AddVariableWithValue(const std::string& variable, const double value);
 	bool AddVariableWithValue(const std::string& variable, const std::string& otherVariable);
 
-	double GetVariableByName(std::string variableName);
+	bool AddFunctionWithVariable(const std::string& functionName, const std::string& variableName);
+	bool AddFunctionWithOperation(const std::string& functionName, const std::string& operation);
+	
+	[[nodiscard]] std::optional<IdentifierType> GetIdentifierType(const std::string& identifier) const;
+	double GetVariableValueByName(std::string variableName);
 
-	const std::set<Identifier>& GetAllVariables() const;
+	[[nodiscard]] const std::set<Identifier>& GetAllVariables() const;
 private:
     std::set<Identifier> m_identifiers;
 };
