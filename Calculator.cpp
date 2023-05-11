@@ -1,6 +1,20 @@
 #include "Calculator.h"
+#include <cmath>
+#include <regex>
 
 using namespace std;
+
+double GetIdentifierValue(const string& identifierValue)
+{
+	try
+	{
+		return stod(identifierValue);
+	}
+	catch (exception& e)
+	{
+		return NAN;
+	}
+}
 
 bool CCalculator::AddVariable(const string& newVar)
 {
@@ -16,12 +30,12 @@ bool CCalculator::AddVariable(const string& newVar)
     return true;
 }
 
-bool isEqual(double a, double b)
+bool IsEqual(double a, double b)
 {
 	return abs(a - b) < numeric_limits<double>::epsilon();
 }
 
-bool CCalculator::AddVariableWithValue(const string& variable, const double value)
+bool CCalculator::AddVariableWithValue(const string& variable, const string& value)
 {
 	Identifier newIdentifier;
 	newIdentifier.identifierName = variable;
@@ -30,7 +44,7 @@ bool CCalculator::AddVariableWithValue(const string& variable, const double valu
 	if (auto search = m_identifiers.find(newIdentifier);
 		search != m_identifiers.end())
 	{
-		if (isEqual(newIdentifier.identifierValue, value))
+		if (newIdentifier.identifierValue == value)
 		{
 			return true;
 		}
@@ -40,7 +54,7 @@ bool CCalculator::AddVariableWithValue(const string& variable, const double valu
 	return true;
 }
 
-bool CCalculator::AddVariableWithValue(const string& variable, const string& otherVariable)
+bool CCalculator::AddVariableWithOtherVariableValue(const string& variable, const string& otherVariable)
 {
 	if (variable == otherVariable)
 	{
@@ -51,15 +65,16 @@ bool CCalculator::AddVariableWithValue(const string& variable, const string& oth
 	if (auto search = m_identifiers.find(oldIdent);
 		search != m_identifiers.end())
 	{
-		if (search->identifierType == IdentifierType::VARIABLE)
+		if (search->identifierType != IdentifierType::VARIABLE)
 		{
-			Identifier newIdent;
-			newIdent.identifierName = variable;
-			newIdent.identifierValue = search->identifierValue;
-			newIdent.identifierType = IdentifierType::VARIABLE;
-			m_identifiers.insert(newIdent);
-			return true;
+			return false;
 		}
+		Identifier newIdent;
+		newIdent.identifierName = variable;
+		newIdent.identifierValue = search->identifierValue;
+		newIdent.identifierType = IdentifierType::VARIABLE;
+		m_identifiers.insert(newIdent);
+		return true;
 	}
 	return false;
 }
@@ -69,16 +84,16 @@ const std::set<Identifier>& CCalculator::GetAllVariables() const
 	return m_identifiers;
 }
 
-double CCalculator::GetVariableValueByName(std::string variableName)
+double CCalculator::GetVariableValueByName(const string variableName) const
 {
 	Identifier identifier;
 	identifier.identifierName = variableName;
 	if (auto search = m_identifiers.find(identifier);
 		search != m_identifiers.end())
 	{
-		return search->identifierValue;
+		return GetIdentifierValue(search->identifierValue);
 	}
-	return INFINITY;
+	return NAN;
 }
 
 optional<IdentifierType> CCalculator::GetIdentifierType(const string& identifierName) const
@@ -115,4 +130,87 @@ bool CCalculator::AddFunctionWithVariable(const std::string& functionName, const
 		}
 	}
 	return false;
+}
+
+bool CCalculator::AddFunctionWithOperation(const string& functionName, const string& operation)
+{
+	Identifier functionToAdd {functionName};
+	if (auto search = m_identifiers.find(functionToAdd);
+		search != m_identifiers.end())
+	{
+		m_identifiers.erase(search);
+	}
+	functionToAdd.identifierType = IdentifierType::FUNCTION;
+	functionToAdd.identifierValue = operation;
+	m_identifiers.insert(functionToAdd);
+	return true;
+}
+
+double GetOperationResult(double operand1, const string& operation, double operand2)
+{
+	if (operation == "+")
+	{
+		return operand1 + operand2;
+	}
+	if (operation == "-")
+	{
+		return operand1 - operand2;
+	}
+	if (operation == "*")
+	{
+		return operand1 * operand2;
+	}
+	if (operation == "/")
+	{
+		if (IsEqual(operand2, 0))
+		{
+			return INFINITY;
+		}
+		return operand1 / operand2;
+	}
+}
+
+double CCalculator::GetFunctionValue(const string& functionName) const
+{
+	Identifier functionToFind{functionName};
+	if (auto search = m_identifiers.find(functionToFind);
+		search != m_identifiers.end())
+	{
+		regex rgx(R"(([a-zA-Z_][a-zA-Z0-9_]*)([+-/*])([a-zA-Z_][a-zA-Z0-9_]*))");
+		smatch submatch;
+		if (!regex_match(search->identifierValue, submatch, rgx))
+		{
+			return GetVariableValueByName(search->identifierValue);
+		}
+		auto firstOperandType = GetIdentifierType(submatch[1]);
+		double firstOperandValue, secondOperandValue;
+		if (!firstOperandType)
+		{
+			return NAN;
+		}
+		if (firstOperandType == IdentifierType::VARIABLE)
+		{
+			firstOperandValue = GetVariableValueByName(submatch[1]);
+		}
+		if (firstOperandType == IdentifierType::FUNCTION)
+		{
+			firstOperandValue = GetFunctionValue(submatch[1]);
+		}
+
+		auto secondOperandType = GetIdentifierType(submatch[3]);
+		if (!secondOperandType)
+		{
+			return NAN;
+		}
+		if (secondOperandType == IdentifierType::VARIABLE)
+		{
+			secondOperandValue = GetVariableValueByName(submatch[3]);
+		}
+		if (secondOperandType == IdentifierType::FUNCTION)
+		{
+			secondOperandValue = GetFunctionValue(submatch[3]);
+		}
+		return GetOperationResult(firstOperandValue, submatch[2], secondOperandValue);
+	}
+	return NAN;
 }

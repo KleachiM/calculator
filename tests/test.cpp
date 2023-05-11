@@ -53,7 +53,7 @@ TEST_CASE("Declaration variable")
 		REQUIRE(calc.GetAllVariables().empty());
 		REQUIRE(ctrl.HandleCommand());
 		REQUIRE(calc.GetAllVariables().size() == 1);
-		REQUIRE(std::isinf(calc.GetVariableValueByName("x")));
+		REQUIRE(std::isnan(calc.GetVariableValueByName("x")));
 	}
 
 	SECTION("Declaration not valid identifier name")
@@ -131,7 +131,7 @@ SCENARIO("Assignment variable to other variable")
 		CControl ctrl(calc, inpStr, outStr);
 		string command;
 
-		calc.AddVariableWithValue("a", 1.0);
+		calc.AddVariableWithValue("a", "1.0");
 
 		WHEN("Assign variable to other variable")
 		{
@@ -156,7 +156,7 @@ SCENARIO("Assignment not existing variable to other variable")
 		CControl ctrl(calc, inpStr, outStr);
 		string command;
 
-		calc.AddVariableWithValue("a", 1.0);
+		calc.AddVariableWithValue("a", "1.0");
 		REQUIRE(calc.GetAllVariables().size() == 1);
 
 		WHEN("Assign not existing variable to other variable")
@@ -183,8 +183,8 @@ SCENARIO("Double assignment variable to other variable")
 		CControl ctrl(calc, inpStr, outStr);
 		string command;
 
-		calc.AddVariableWithValue("a", 1.0);
-		calc.AddVariableWithValue("b", "a");
+		calc.AddVariableWithValue("a", "1.0");
+		calc.AddVariableWithOtherVariableValue("b", "a");
 
 		WHEN("Double assign variable to other variable")
 		{
@@ -275,9 +275,9 @@ SCENARIO("Print all variables")
 
 		WHEN("Print variables after adding two vars")
 		{
-			calc.AddVariableWithValue("a", 1.5);
+			calc.AddVariableWithValue("a", "1.5");
 			calc.AddVariable("c");
-			calc.AddVariableWithValue("b", "a");
+			calc.AddVariableWithOtherVariableValue("b", "a");
 
 			inpStr << "printvars\n"s;
 			REQUIRE(ctrl.HandleCommand());
@@ -297,7 +297,7 @@ TEST_CASE("Declare function")
 	stringstream outStr;
 	CControl ctrl(calc, inpStr, outStr);
 
-	SECTION("Assign to function variable with nan")
+	SECTION("Assign to function variable with value = nan")
 	{
 		inpStr << "var a\n"s;
 		ctrl.HandleCommand();
@@ -306,5 +306,49 @@ TEST_CASE("Declare function")
 		REQUIRE(ctrl.HandleCommand());
 		REQUIRE(outStr.str() == ""s);
 		REQUIRE(calc.GetAllVariables().size() == 2);
+		REQUIRE(isnan(calc.GetVariableValueByName("firstFunc")));
+	}
+
+	SECTION("Assign to function variable with value = 1.5")
+	{
+		inpStr << "let a=1.5\n"s;
+		ctrl.HandleCommand();
+		REQUIRE(calc.GetAllVariables().size() == 1);
+		inpStr << "fn firstFunc=a\n"s;
+		REQUIRE(ctrl.HandleCommand());
+		REQUIRE(outStr.str() == ""s);
+		REQUIRE(calc.GetAllVariables().size() == 2);
+		REQUIRE(calc.GetVariableValueByName("firstFunc") == Catch::Approx(1.5));
+	}
+
+	SECTION("Function Sum2And2")
+	{
+		inpStr << "let a=2\n"s;
+		ctrl.HandleCommand();
+		inpStr << "let b=2\n"s;
+		ctrl.HandleCommand();
+		inpStr << "fn Sum2And2=a+b\n"s;
+		ctrl.HandleCommand();
+		REQUIRE(calc.GetAllVariables().size() == 3);
+		inpStr << "print Sum2And2\n"s;
+		ctrl.HandleCommand();
+		REQUIRE(outStr.str() == "4.00\n"s);
+	}
+
+	SECTION("Function from other functions")
+	{
+		inpStr << "let a=2\n"s;
+		ctrl.HandleCommand();
+		inpStr << "let b=3\n"s;
+		ctrl.HandleCommand();
+		inpStr << "fn Sum=a+b\n"s;
+		ctrl.HandleCommand();
+		inpStr << "fn Mult=a*b\n"s;
+		ctrl.HandleCommand();
+		inpStr << "fn ResFunc=Sum-Mult\n"s;
+		ctrl.HandleCommand();
+		inpStr << "print ResFunc\n"s;
+		ctrl.HandleCommand();
+		REQUIRE(outStr.str() == "-1.00\n"s);
 	}
 }

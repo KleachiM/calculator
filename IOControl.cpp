@@ -105,23 +105,16 @@ bool CControl::ParseCommandAndArgsForAddVariable(smatch& submatch)
 			return false;
 		}
 	}
-	try
+	if (submatch[2].matched)
 	{
-		return m_calc.AddVariableWithValue(submatch[1], stod(submatch[2]));
+		return m_calc.AddVariableWithValue(submatch[1], submatch[2]);
 	}
-	catch (invalid_argument& e)
+	if (!m_calc.AddVariableWithOtherVariableValue(submatch[1], submatch[3]))
 	{
-		if (!m_calc.AddVariableWithValue(submatch[1], submatch[3]))
-		{
-			m_output << "Assignment not possible" << endl;
-			return false;
-		}
-		return true;
-	}
-	catch (out_of_range& e)
-	{
+		m_output << "Assignment not possible" << endl;
 		return false;
 	}
+	return true;
 }
 
 bool CControl::AssignValueToVariable(istream& inpStrm)
@@ -162,11 +155,12 @@ bool CControl::PrintValue(istream& inpStrm) const
 			m_output << "Variable not exist" << endl;
 			return false;
 		}
-		m_output << fixed << setprecision(2) << value << endl;
+		m_output << value << endl;
 		return true;
 	}
-
-	return false;
+	double value = m_calc.GetFunctionValue(identifier);
+	m_output << fixed << setprecision(2) << value << endl;
+	return true;
 }
 
 bool CControl::PrintVars(istream& inpStrm) const
@@ -180,7 +174,7 @@ bool CControl::PrintVars(istream& inpStrm) const
 			{
 				m_output << item.identifierName << ":"
 						 << fixed << setprecision(2)
-						 << item.identifierValue << endl;
+						 << m_calc.GetVariableValueByName(item.identifierName) << endl;
 			}
 		}
 	}
@@ -198,7 +192,7 @@ bool CControl::DeclareFunction(istream& inpStrm)
 	}
 	regex rgx(
 		"^([a-zA-Z_][a-zA-Z0-9_]*)="
-		"(?:([a-zA-Z_][a-zA-Z0-9_]*)|([a-zA-Z_][a-zA-Z0-9_][+,-,/,*][a-zA-Z_][a-zA-Z0-9_]*))$"
+		"(?:([a-zA-Z_][a-zA-Z0-9_]*)|([a-zA-Z_][a-zA-Z0-9_]*[+-/*][a-zA-Z_][a-zA-Z0-9_]*))$"
 		);
 	smatch submatch;
 	if (!regex_match(funcDeclaration, submatch, rgx))
@@ -221,14 +215,24 @@ bool CControl::ParseCommandAndArgsForAddFunction(const smatch& submatch)
 		return false;
 	}
 	Identifier identifierToFind;
-	identifierToFind.identifierName = submatch[2];
-	auto identToFind = allIdentifiers.find(identifierToFind);
-	if (identToFind == allIdentifiers.end())
+	if (submatch[2].matched)
 	{
-		m_output << "Identifier not exist" << endl;
-		return false;
+		identifierToFind.identifierName = submatch[2];
+		auto identToFind = allIdentifiers.find(identifierToFind);
+		if (identToFind == allIdentifiers.end())
+		{
+			m_output << "Identifier not exist" << endl;
+			return false;
+		}
+		identifierToAdd.identifierValue = identToFind->identifierValue;
+		if (!m_calc.AddFunctionWithVariable(identifierToAdd.identifierName,
+				identifierToFind.identifierName))
+		{
+			m_output << "Not possible to add function" << endl;
+			return false;
+		}
+		return true;
 	}
-	identifierToAdd.identifierValue = identToFind->identifierValue;
-	m_calc.AddFunctionWithVariable(identifierToAdd.identifierName, identifierToFind.identifierName);
+	m_calc.AddFunctionWithOperation(identifierToAdd.identifierName, submatch[3]);
 	return true;
 }

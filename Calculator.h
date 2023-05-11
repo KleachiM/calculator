@@ -16,7 +16,8 @@ struct Identifier
 {
 	std::string identifierName;
 	IdentifierType identifierType;
-	double identifierValue = NAN;
+//	double identifierValue = NAN;
+	std::string identifierValue = "nan";
 
 	bool operator<(const Identifier& left) const
 	{
@@ -29,15 +30,16 @@ class CCalculator
 public:
     bool AddVariable(const std::string& newVar);
 
-	bool AddVariableWithValue(const std::string& variable, const double value);
-	bool AddVariableWithValue(const std::string& variable, const std::string& otherVariable);
+	bool AddVariableWithValue(const std::string& variable, const std::string& value);
+	bool AddVariableWithOtherVariableValue(const std::string& variable, const std::string& otherVariable);
+//	double GetIdentifierValue(const std::string& identifierName) const;
+	double GetVariableValueByName(const std::string variableName) const;
 
 	bool AddFunctionWithVariable(const std::string& functionName, const std::string& variableName);
 	bool AddFunctionWithOperation(const std::string& functionName, const std::string& operation);
+	double GetFunctionValue(const std::string& functionName) const;
 	
 	[[nodiscard]] std::optional<IdentifierType> GetIdentifierType(const std::string& identifier) const;
-	double GetVariableValueByName(std::string variableName);
-
 	[[nodiscard]] const std::set<Identifier>& GetAllVariables() const;
 private:
     std::set<Identifier> m_identifiers;
