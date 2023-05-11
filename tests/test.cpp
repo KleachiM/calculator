@@ -260,7 +260,6 @@ SCENARIO("Print all variables")
 		stringstream inpStr;
 		stringstream outStr;
 		CControl ctrl(calc, inpStr, outStr);
-		string command;
 
 		WHEN("Print variables when none are declared")
 		{
@@ -350,5 +349,44 @@ TEST_CASE("Declare function")
 		inpStr << "print ResFunc\n"s;
 		ctrl.HandleCommand();
 		REQUIRE(outStr.str() == "-1.00\n"s);
+	}
+}
+
+SCENARIO("Print all functions")
+{
+	GIVEN("Calc without functions")
+	{
+		CCalculator calc;
+		stringstream inpStr;
+		stringstream outStr;
+		CControl ctrl(calc, inpStr, outStr);
+
+		WHEN("Print functions when none are declared")
+		{
+			inpStr << "printfns\n";
+			REQUIRE(ctrl.HandleCommand());
+
+			THEN("Std cout is empty")
+			{
+				REQUIRE(outStr.str() == "");
+			}
+		}
+
+		WHEN("Add functions")
+		{
+			inpStr << "let a=2\n"s;
+			ctrl.HandleCommand();
+			inpStr << "let b=3\n"s;
+			ctrl.HandleCommand();
+			inpStr << "fn Sum=a+b\n"s;
+			ctrl.HandleCommand();
+			inpStr << "fn Mult=a*b\n"s;
+			ctrl.HandleCommand();
+			inpStr << "fn ResFunc=Sum-Mult\n"s;
+			ctrl.HandleCommand();
+			inpStr << "printfns\n"s;
+			ctrl.HandleCommand();
+			REQUIRE(outStr.str() == "Mult:6.00\nResFunc:-1.00\nSum:5.00\n"s);
+		}
 	}
 }

@@ -21,6 +21,7 @@ private:
 
 	bool PrintValue(std::istream& inpStrm) const;
 	bool PrintVars(std::istream& inpStrm) const;
+	bool PrintFunctions(std::istream& inpStrm) const;
 
 	bool DeclareFunction(std::istream& inpStrm);
 	bool ParseCommandAndArgsForAddFunction(const std::smatch& submatch);

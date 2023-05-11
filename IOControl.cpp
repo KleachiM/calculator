@@ -21,8 +21,11 @@ CControl::CControl(CCalculator& calc, std::istream& input, std::ostream& output)
 		{"printvars", [this](istream& strm) {
 			 return PrintVars(strm);
 		 }},
-		{"fn", [this](istream& strm){
+		{"fn", [this](istream& strm) {
 			 return DeclareFunction(strm);
+		 }},
+		{"printfns", [this](istream& strm) {
+			 return PrintFunctions(strm);
 		 }}
 	})
 {}
@@ -175,6 +178,24 @@ bool CControl::PrintVars(istream& inpStrm) const
 				m_output << item.identifierName << ":"
 						 << fixed << setprecision(2)
 						 << m_calc.GetVariableValueByName(item.identifierName) << endl;
+			}
+		}
+	}
+	return true;
+}
+
+bool CControl::PrintFunctions(std::istream& inpStrm) const
+{
+	auto& allVariables = m_calc.GetAllVariables();
+	if (allVariables.size() > 0)
+	{
+		for (auto item: allVariables)
+		{
+			if (item.identifierType == IdentifierType::FUNCTION)
+			{
+				m_output << item.identifierName << ":"
+						 << fixed << setprecision(2)
+						 << m_calc.GetFunctionValue(item.identifierName) << endl;
 			}
 		}
 	}
