@@ -112,7 +112,7 @@ bool CControl::ParseCommandAndArgsForAddVariable(smatch& submatch)
 	{
 		return m_calc.AddVariableWithValue(submatch[1], submatch[2]);
 	}
-	if (!m_calc.AddVariableWithOtherVariableValue(submatch[1], submatch[3]))
+	if (!m_calc.AddVariableWithOtherVariableValue(submatch[1], submatch[4]))
 	{
 		m_output << "Assignment not possible" << endl;
 		return false;
@@ -130,7 +130,8 @@ bool CControl::AssignValueToVariable(istream& inpStrm)
 		return false;
 	}
 	regex rgx(
-		"^([a-zA-Z_][a-zA-Z0-9_]*)=(?:(-?[0-9][0-9.]*)|([a-zA-Z_][a-zA-Z0-9_]*))$"
+//		"^([a-zA-Z_][a-zA-Z0-9_]*)=(?:(-?[0-9][0-9.]*)|([a-zA-Z_][a-zA-Z0-9_]*))$" // без возможности чтения эксп записи
+		"^([a-zA-Z_][a-zA-Z0-9_]*)=(?:([+-]?[0-9][0-9.]*([eE][0-9]*)?)|([a-zA-Z_][a-zA-Z0-9_]*))$"
 		);
 	smatch submatch;
 	if (!regex_match(assignment, submatch, rgx))

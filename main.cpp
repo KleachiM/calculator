@@ -3,7 +3,7 @@
 
 int main()
 {
-    double d = NAN;
+    double d = 2e1;
     std::cout << d << std::endl;
     return 0;
 }

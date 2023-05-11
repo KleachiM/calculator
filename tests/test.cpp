@@ -372,7 +372,7 @@ SCENARIO("Print all functions")
 			}
 		}
 
-		WHEN("Add functions")
+		WHEN("Add functions and print it")
 		{
 			inpStr << "let a=2\n"s;
 			ctrl.HandleCommand();
@@ -386,7 +386,36 @@ SCENARIO("Print all functions")
 			ctrl.HandleCommand();
 			inpStr << "printfns\n"s;
 			ctrl.HandleCommand();
-			REQUIRE(outStr.str() == "Mult:6.00\nResFunc:-1.00\nSum:5.00\n"s);
+
+			THEN("Print all functions")
+			{
+				REQUIRE(outStr.str() == "Mult:6.00\nResFunc:-1.00\nSum:5.00\n"s);
+			}
 		}
 	}
 }
+
+SCENARIO("Zero division")
+{
+	GIVEN("Calc")
+	{
+		CCalculator calc;
+		stringstream inpStr;
+		stringstream outStr;
+		CControl ctrl(calc, inpStr, outStr);
+
+		WHEN("Add 2 variable and assign 0 to one of they")
+		{
+			inpStr << "let a=1e10\n"s;
+			ctrl.HandleCommand();
+			inpStr << "let b=1e2\n"s;
+			ctrl.HandleCommand();
+			inpStr << "fn div=a/b\n"s;
+			ctrl.HandleCommand();
+			inpStr << "print div\n";
+			REQUIRE(ctrl.HandleCommand());
+			REQUIRE(outStr.str() == "inf\n");
+		}
+	}
+}
+
